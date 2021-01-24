@@ -1,0 +1,122 @@
+---
+title: "Capstone Project"
+author: "Pulin Jhaveri"
+date: "1/24/2021"
+output: ioslides_presentation
+---
+## Capstone Usage:
+- We will try to Predict Next Word user might want to type
+
+
+- Text: This is the prefix of text use to find the next word
+- NGrams: Number of last words in the text above to be tokenize.
+- Submit: Click on Submit Button
+- On right top Pane shows the Options of most used phrases based on Ngrams chosen
+- On right lower Pane shows the predicted next word
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library("tm")
+library(SnowballC)
+library(RWeka)
+library(ggplot2)
+library(stringr)
+```
+
+## How it Works:
+
+- For example lets take our sentence as "an issue we raised in our"
+- Ngrams are assumed to be 3
+- We would define a function to read lines of smaller versions of 
+Blogs, News and Twitter text files each containing 2000 lines
+-After it finds the last Ngram words, it will also collect the next word and put
+into a vector
+
+```{r echo=TRUE}
+
+findOurSent<- function(file, sentence) {
+  con <- file(file, "r")
+  sentences = c()
+  counter = 0
+  while ( TRUE ) {
+    
+    line = readLines(con, n = 1, skipNul=T,warn=FALSE)
+    if ( length(line) == 0 ) {
+      break
+    }else{
+      
+      if(grepl( sentence, line, fixed = TRUE)) {
+        counter = counter+1
+        loc<-str_locate(line, sentence)
+        lastWord2<-str_locate(substr(line,loc[1,2]+1,nchar(line))," ")#find next space
+        sentences[counter] = substr(line,loc[1,1],(loc[1,2]+lastWord2[1,1]))
+        if(counter>200) {
+          break
+        }
+      }
+    }
+  }
+  close(con)
+  sentences
+}
+
+```
+
+## Processing the Results
+- We will run this function for each of the files
+```{r echo=TRUE}
+sentence <- 'in our '
+
+newsfinds=findOurSent("~/R/Coursera/Capstone Project/final/en_US_small/en_US.news.txt",
+                      sentence)
+blogsfinds<-findOurSent("~/R/Coursera/Capstone Project/final/en_US_small/en_US.blogs.txt",
+                        sentence)
+twitterfinds<-findOurSent("~/R/Coursera/Capstone Project/final/en_US_small/en_US.twitter.txt",
+                          sentence)
+
+```
+- Combine them into a vector, clean lines with NA
+```{r echo=TRUE}
+all_data = c(newsfinds,blogsfinds,twitterfinds)
+all_data[which(is.na(all_data))] <- "NULLVALUEENTERED"
+```
+- Define Ngram tokenizer, use it into Document Matrix. We assume the N-grams 
+chosen are 3
+```{r echo=TRUE}
+twitter.Corpus <- VCorpus(VectorSource(all_data))
+NthgramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=3, max=3))
+dtm <- DocumentTermMatrix(twitter.Corpus, control = list(tokenize=NthgramTokenizer))
+
+```
+
+## Part 2 Processing the Results
+- We will create data frame that will sort this matrix based on frequency in 
+descending order
+```{r echo=TRUE}
+frequencyPerWord <- sort(colSums(as.matrix(dtm)), decreasing=TRUE)
+frequencyPerWord <- data.frame(
+  word = names(frequencyPerWord),
+  frequency = frequencyPerWord
+)
+
+```
+- We will consider first 5 tokens which are most frequently used
+
+
+## Plot the top 5 results
+
+```{r }
+ggplot(subset(frequencyPerWord[1:5,]), aes(x=reorder(word, -frequency), y=frequency)) +
+            geom_bar(stat="identity") +
+            theme(axis.text.x = element_text(angle = 90))
+            
+```
+
+## Predict the next word
+We can the take the phrase and separate last word 
+``` {r echo=TRUE}
+List <- strsplit(frequencyPerWord[1,]$word, " ")
+lastWord<-List[[1]][(length(List[[1]]))]
+lastWord
+
+```
