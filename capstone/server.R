@@ -41,10 +41,11 @@ shinyServer(function(input, output) {
 
     letsRun<- reactive({
         text1<-input$text1
-        ngrams<-as.numeric(input$ngrams)
+        
         
         List <- strsplit(text1, " ")
-        text1<-paste(List[[1]][(length(List[[1]])-(ngrams-2)):(length(List[[1]]))], collapse = ' ')
+        ngrams<-length(List[[1]])+1
+        # text1<-paste(List[[1]][(length(List[[1]])-(ngrams-2)):(length(List[[1]]))], collapse = ' ')
         if(!(endsWith(text1,' '))) {
             text1<-str_c(text1,' ')    
         }
@@ -57,11 +58,12 @@ shinyServer(function(input, output) {
             twitterfinds<-findOurSent("en_US_small/en_US.twitter.txt",text1)
             
             all_data = c(newsfinds,blogsfinds,twitterfinds)
+            print("all fine")
             all_data[which(is.na(all_data))] <- "NULLVALUEENTERED"
-            
+            print("all fine2")
             twitter.Corpus <- VCorpus(VectorSource(all_data))
             
-            NthgramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=input$ngrams, max=input$ngrams))
+            NthgramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=ngrams, max=ngrams))
             dtm <- DocumentTermMatrix(twitter.Corpus, control = list(tokenize=NthgramTokenizer))
             
             frequencyPerWord <- sort(colSums(as.matrix(dtm)), decreasing=TRUE)

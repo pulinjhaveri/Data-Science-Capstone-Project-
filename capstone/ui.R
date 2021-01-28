@@ -7,8 +7,8 @@ shinyUI(fluidPage(
     sidebarLayout(
         
         sidebarPanel(
-            textInput("text1", "Enter Sentence"),
-            selectInput("ngrams", "N-Grams:",c(1:4)),
+            textInput("text1", "Enter phrase from first 2000 lines"),
+            #selectInput("ngrams", "N-Grams:",c(1:4)),
             submitButton("Submit")
         ),
 
